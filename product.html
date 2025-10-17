@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shop - NeonMarket</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">NeonMarket</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="products.html">Shop</a></li>
+        <li><a href="market.html">Marketplace</a></li>
+        <li><a href="dashboard.html">Sell</a></li>
+        <li><a href="login.html">Login</a></li>
+        <li><a href="signup.html">Sign Up</a></li>
+        <li><a href="cart.html" id="cartLink">Cart (<span id="cartCount">0</span>)</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="shop-hero">
+    <h1>Browse Local Goods</h1>
+    <p>Fresh finds, neon vibes.</p>
+  </section>
+
+  <section class="product-grid-section">
+    <h2>Popular Picks</h2>
+    <div id="productGrid" class="product-grid"></div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 NeonMarket. All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    const sampleProducts = [
+      { id:'s1', name: "Wireless Headphones", price: 45, image: "assets/product1.jpg", desc: "Dope sound, comfy fit", sellerName: "Neon Seller" },
+      { id:'s2', name: "Neon Sneakers", price: 60, image: "assets/product2.jpg", desc: "Glow on the move", sellerName: "Sneaker Guy" }
+    ];
+
+    function getProducts(){ return JSON.parse(localStorage.getItem('products')) || sampleProducts; }
+
+    function renderProducts(){
+      const products = getProducts();
+      const grid = document.getElementById("productGrid");
+      grid.innerHTML = "";
+      products.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+          <img src="${p.image || 'https://via.placeholder.com/300'}" alt="${p.name}">
+          <h3>${p.name}</h3>
+          <p style="color:#00e5ff">$${p.price}</p>
+          <p style="color:#aaa;font-size:0.9rem">${p.sellerName ? 'Sold by: ' + p.sellerName : ''}</p>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+            <a href="product-details.html?id=${encodeURIComponent(p.id || idx)}" class="glow-btn">View</a>
+            <button class="buy-btn" onclick='addToCart("${p.id || idx}")'>Add to Cart</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+      updateCartCount();
+    }
+
+    // Cart functions compatible with product id or index
+    function getCart(){ return JSON.parse(localStorage.getItem('cart')) || []; }
+    function saveCart(c){ localStorage.setItem('cart', JSON.stringify(c)); updateCartCount(); }
+
+    function addToCart(productIdOrIndex){
+      const products = getProducts();
+      // find product by id; if id not found try index
+      let prod = products.find(x => x.id === productIdOrIndex);
+      if(!prod){
+        const idx = parseInt(productIdOrIndex,10);
+        prod = products[idx];
+      }
+      if(!prod) return alert('Product not found.');
+      const cart = getCart();
+      const existing = cart.find(i => i.name === prod.name && i.price === prod.price);
+      if(existing) existing.qty = (existing.qty || 1) + 1;
+      else cart.push({ name: prod.name, price: prod.price, image: prod.image, qty: 1 });
+      saveCart(cart);
+      alert('Added to cart ✅');
+    }
+
+    function updateCartCount(){
+      const el = document.getElementById('cartCount');
+      if(!el) return;
+      const count = getCart().reduce((s,i)=> s + (i.qty||1), 0);
+      el.textContent = count;
+    }
+
+    // expose for product-details pages that expect numeric ids too
+    window.addToCart = addToCart;
+
+    renderProducts();
+  </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en, swahili">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sign Up - NeonMarket</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-container">
+    <h2 class="auth-title">Create Account</h2>
+    <form id="signupForm" class="auth-form">
+      <input type="text" id="username" placeholder="Full name" required>
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <label style="font: size 0.9rem;">
+        <input type="checkbox" id="isSeller"> Register as a seller
+      </label>
+      <button type="submit" class="auth-btn">Sign Up</button>
+    </form>
+    <p class="auth-link">Already have an account? <a href="login.html">Login</a></p>
+  </div>
+
+  <script>
+    // helper to get users array
+    function getUsers(){
+      return JSON.parse(localStorage.getItem('users')) || [];
+    }
+    function saveUsers(u){ localStorage.setItem('users', JSON.stringify(u)); }
+
+    document.getElementById('signupForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      const isSeller = document.getElementById('isSeller').checked;
+
+      if(!username || !email || !password) return alert('Fill all fields.');
+
+      const users = getUsers();
+      if(users.find(u => u.email === email)) return alert('Email already registered.');
+
+      const newUser = { username, email, password, role: isSeller ? 'seller' : 'buyer', createdAt: Date.now() };
+      users.push(newUser);
+      saveUsers(users);
+
+      alert('Signup successful! Please login.');
+      window.location.href = 'login.html';
+    });
+  </script>
+</body>
+</html>

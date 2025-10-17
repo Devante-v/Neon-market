@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cart - NeonMarket</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* small modal styles specific to cart page */
+    .modal-backdrop{ position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999; }
+    .modal-card{ background:#0f0f12;padding:20px;border-radius:12px;max-width:480px;width:100%;box-shadow:0 0 20px rgba(0,0,0,0.6); }
+    .modal-card h3{ margin-top:0;color:#fff; }
+    .field { margin-bottom:12px; }
+    .field input { width:100%;padding:10px;border-radius:6px;border:1px solid #333;background:#0d0d0f;color:#fff; }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">NeonMarket</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="products.html">Shop</a></li>
+        <li><a href="market.html">Marketplace</a></li>
+        <li><a href="cart.html">Cart</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main style="max-width:1000px;margin:40px auto;padding:0 20px;">
+    <h1>Your Cart</h1>
+    <div id="cartWrap"></div>
+    <div id="cartSummary" style="margin-top:24px;"></div>
+  </main>
+
+  <!-- Payment modal (hidden) -->
+  <div id="paymentModal" style="display:none">
+    <div class="modal-backdrop" id="modalBackdrop">
+      <div class="modal-card">
+        <h3>Fake Payment</h3>
+        <p style="color:#aaa">This simulates a payment. No real charges.</p>
+        <div class="field">
+          <label>Cardholder name</label>
+          <input id="cardName" placeholder="Full name on card">
+        </div>
+        <div class="field">
+          <label>Card number</label>
+          <input id="cardNumber" placeholder="4242 4242 4242 4242">
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="field" style="flex:1">
+            <label>Expiry</label>
+            <input id="cardExp" placeholder="MM/YY">
+          </div>
+          <div class="field" style="flex:1">
+            <label>CVC</label>
+            <input id="cardCvc" placeholder="123">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+          <button class="buy-btn" id="payCancel">Cancel</button>
+          <button class="glow-btn" id="payNow">Pay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function getCart(){ return JSON.parse(localStorage.getItem('cart')) || []; }
+    function saveCart(c){ localStorage.setItem('cart', JSON.stringify(c)); renderCart(); updateCount(); }
+
+    function updateCount(){
+      const n = getCart().reduce((s,i)=> s + (i.qty||1), 0);
+      document.querySelectorAll('#cartCount').forEach(e=> e.textContent = n);
+      const linkCount = document.getElementById('cartCount');
+      if(linkCount) linkCount.textContent = n;
+    }
+
+    function renderCart(){
+      const wrap = document.getElementById("cartWrap");
+      const cart = getCart();
+      if(!cart.length){
+        wrap.innerHTML = '<p>Your cart is empty. Go grab some neon drip!</p>';
+        document.getElementById('cartSummary').innerHTML = '';
+        return;
+      }
+      wrap.innerHTML = '';
+      cart.forEach((item, idx) => {
+        const row = document.createElement("div");
+        row.style = "display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05)";
+        row.innerHTML = `
+          <img src="${item.image||'https://via.placeholder.com/80'}" alt="${item.name}" style="width:80px;border-radius:6px">
+          <div style="flex:1">
+            <strong>${item.name}</strong>
+            <div style="color:#00e5ff;margin-top:6px">$${item.price} x <input type="number" min="1" value="${item.qty||1}" data-idx="${idx}" class="qty-input" style="width:60px;padding:6px;border-radius:6px;background:#0d0d0f;border:1px solid #333;color:#fff"></div>
+          </div>
+          <div>
+            <button class="buy-btn" onclick="removeItem(${idx})">Remove</button>
+          </div>
+        `;
+        wrap.appendChild(row);
+      });
+
+      const subtotal = cart.reduce((s,i)=> s + (i.price * (i.qty||1)), 0);
+      document.getElementById('cartSummary').innerHTML = `
+        <div style="text-align:right">
+          <p style="font-size:1.1rem">Subtotal: <strong style="color:#00e5ff">$${subtotal.toFixed(2)}</strong></p>
+          <button class="glow-btn" id="checkoutBtn">Checkout</button>
+        </div>
+      `;
+
+      // qty listeners
+      document.querySelectorAll('.qty-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const i = parseInt(e.target.dataset.idx,10);
+          let v = parseInt(e.target.value,10);
+          if(isNaN(v) || v < 1) v = 1;
+          const cart = getCart();
+          cart[i].qty = v;
+          saveCart(cart);
+        });
+      });
+
+      updateCount();
+      document.getElementById('checkoutBtn').addEventListener('click', openPaymentModal);
+    }
+
+    function removeItem(idx){
+      const cart = getCart();
+      cart.splice(idx,1);
+      saveCart(cart);
+    }
+
+    // Payment modal flow
+    function openPaymentModal(){
+      document.getElementById('paymentModal').style.display = 'block';
+    }
+    function closePaymentModal(){
+      document.getElementById('paymentModal').style.display = 'none';
+    }
+
+    document.getElementById('payCancel').addEventListener('click', closePaymentModal);
+    document.getElementById('modalBackdrop').addEventListener('click', function(e){
+      if(e.target.id === 'modalBackdrop') closePaymentModal();
+    });
+
+    document.getElementById('payNow').addEventListener('click', function(){
+      // basic validation
+      const name = document.getElementById('cardName').value.trim();
+      const num = document.getElementById('cardNumber').value.trim();
+      const exp = document.getElementById('cardExp').value.trim();
+      const cvc = document.getElementById('cardCvc').value.trim();
+      if(!name || !num || !exp || !cvc) return alert('Fill fake card details to continue.');
+
+      // simulate processing
+      const btn = document.getElementById('payNow');
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = 'Pay';
+        // success
+        localStorage.removeItem('cart'); // clear cart -> real checkout would integrate payments backend
+        closePaymentModal();
+        renderCart(); // refresh contents
+        updateCount();
+        alert('Payment simulated ✅ Purchase complete. Thank you!');
+      }, 1500);
+    });
+
+    // init
+    renderCart();
+    updateCount();
+  </script>
+</body>
+</html>

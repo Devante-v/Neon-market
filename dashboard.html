@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Seller Dashboard - NeonMarket</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Inline modal + preview + crop styles */
+    .modal-overlay { position: fixed; inset:0; display:none; background:rgba(0,0,0,0.75); justify-content:center; align-items:center; z-index:1200; }
+    .modal { background:#0f0f12; padding:20px; border-radius:12px; width:92%; max-width:720px; color:#fff; box-shadow:0 8px 40px rgba(0,0,0,0.6); }
+    .modal h3{ font-family:Orbitron, sans-serif; text-shadow:0 0 8px #00e5ff; margin:0 0 12px;}
+    .thumb-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+    .thumb{ width:72px; height:72px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; }
+    .preview-row{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .preview-thumb{ width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.06); }
+    .img-count{ position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.6); padding:6px 8px; border-radius:999px; font-size:0.8rem; color:#fff; box-shadow:0 0 8px rgba(255,0,255,0.12); }
+    .drag-handle{ width:20px; height:20px; background:rgba(255,255,255,0.06); border-radius:4px; display:inline-block; text-align:center; line-height:20px; cursor:grab; }
+    /* Crop modal */
+    .crop-canvas{ max-width:100%; border-radius:8px; display:block; margin:0 auto; background:#111; }
+    .crop-note{ font-size:0.85rem; color:#aaa; margin-top:6px;}
+    /* Product card adjustments */
+    .product-card { position:relative; overflow:hidden; border-radius:10px; background:rgba(255,255,255,0.02); padding:12px; transition:transform .25s, box-shadow .25s; }
+    .product-card:hover{ transform:translateY(-6px); box-shadow:0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(0,255,242,0.06); }
+    /* Carousel modal on product-details side (shared style) */
+    .lightbox-overlay{ position:fixed; inset:0; display:none; background:rgba(0,0,0,0.85); z-index:1300; justify-content:center; align-items:center; }
+    .lightbox{ max-width:1100px; width:95%; max-height:90%; display:flex; gap:12px; align-items:center; justify-content:center; }
+    .lightbox img{ max-width:80vw; max-height:80vh; object-fit:contain; border-radius:8px; }
+    .lb-btn{ background:transparent; border:2px solid rgba(255,255,255,0.08); padding:8px 12px; color:#fff; cursor:pointer; border-radius:8px; }
+    @media (max-width:700px){ .lightbox img{ max-width:92vw; max-height:68vh; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">NeonMarket</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="products.html">Shop</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+      <li><a href="cart.html">Cart (<span id="cartCount">0</span>)</a></li>
+      <li><a href="#" id="logoutBtn">Logout</a></li>
+    </ul>
+  </nav>
+
+  <main style="padding:28px;max-width:1100px;margin:0 auto;">
+    <h1>Seller Dashboard</h1>
+    <div id="sellerInfo" style="margin-bottom:14px;color:#ddd"></div>
+
+    <section style="background:rgba(255,255,255,0.02);padding:18px;border-radius:10px;margin-bottom:22px">
+      <h3>Add New Product</h3>
+      <form id="addProductForm" style="display:flex;flex-direction:column;gap:10px;max-width:800px">
+        <input type="text" id="productName" placeholder="Product name" required>
+        <input type="number" id="productPrice" placeholder="Price" required>
+        <textarea id="productDesc" placeholder="Short description" rows="3"></textarea>
+
+        <input type="file" id="productImageFile" accept="image/*" multiple>
+        <div id="addPreview" class="preview-row" aria-live="polite"></div>
+
+        <div style="display:flex;gap:8px">
+          <button type="submit" class="glow-btn">Add Product</button>
+          <button type="button" class="buy-btn" id="clearAddImages">Clear Images</button>
+        </div>
+        <small style="color:#888">Upload up to 5 images. You can preview, reorder, or crop them after adding.</small>
+      </form>
+    </section>
+
+    <section>
+      <h3>My Listings</h3>
+      <div id="productList" class="product-grid"></div>
+    </section>
+  </main>
+
+  <!-- Edit Modal (neon popup) -->
+  <div id="editOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <h3 id="editTitle">Edit Product</h3>
+
+      <form id="editForm" style="display:flex;flex-direction:column;gap:8px;">
+        <input type="text" id="editName" placeholder="Product name" required>
+        <input type="number" id="editPrice" placeholder="Price" required>
+        <textarea id="editDesc" placeholder="Short description" rows="3"></textarea>
+
+        <div style="margin-top:6px">
+          <strong style="font-size:0.95rem">Current Images</strong>
+          <div id="currentThumbs" class="thumb-row" aria-live="polite"></div>
+        </div>
+
+        <div style="margin-top:8px">
+          <label style="font-size:0.9rem;color:#aaa">Add / Replace images (optional)</label>
+          <input type="file" id="editImageFiles" accept="image/*" multiple>
+          <div id="editPreview" class="preview-row"></div>
+          <small style="color:#888">When saving, new selection replaces the existing images

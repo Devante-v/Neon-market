@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Product - NeonMarket</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">NeonMarket</div>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="products.html">Shop</a></li>
+        <li><a href="market.html">Marketplace</a></li>
+        <li><a href="cart.html">Cart (<span id="cartCount">0</span>)</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main style="padding:40px;">
+    <div id="productWrap" style="max-width:1000px;margin:0 auto;display:flex;gap:30px;flex-wrap:wrap;"></div>
+  </main>
+
+  <script>
+    function qs(key){ return new URLSearchParams(window.location.search).get(key); }
+
+    const products = JSON.parse(localStorage.getItem('products')) || [];
+    const sample = [
+      { id:'s1', name: "Wireless Headphones", price: 45, image: "assets/product1.jpg", desc: "Dope sound, comfy fit", sellerName: "Neon Seller", sellerEmail: "" },
+      { id:'s2', name: "Neon Sneakers", price: 60, image: "assets/product2.jpg", desc: "Glow on the move", sellerName: "Sneaker Guy", sellerEmail: "" }
+    ];
+    const all = Array.isArray(products) && products.length ? products : sample;
+    const id = qs('id') || (0).toString();
+    // try find by id
+    let product = all.find(p=> String(p.id) === String(id));
+    if(!product){
+      // fallback to numeric
+      const idx = parseInt(id,10);
+      product = all[idx] || all[0];
+    }
+
+    function getCart(){ return JSON.parse(localStorage.getItem('cart')) || []; }
+    function saveCart(c){ localStorage.setItem('cart', JSON.stringify(c)); updateCartCount(); }
+    function addToCartObj(prod){
+      const cart = getCart();
+      const existing = cart.find(i => i.name === prod.name && i.price === prod.price);
+      if (existing) existing.qty = (existing.qty||1)+1;
+      else cart.push({ name: prod.name, price: prod.price, image: prod.image, qty: 1 });
+      saveCart(cart);
+      alert('Added to cart ✅');
+    }
+
+    function updateCartCount(){
+      const el = document.getElementById('cartCount');
+      if(!el) return;
+      const count = getCart().reduce((s,i)=> s + (i.qty||1), 0);
+      el.textContent = count;
+    }
+
+    const wrap = document.getElementById('productWrap');
+    wrap.innerHTML = `
+      <div style="flex:1;min-width:300px;">
+        <img src="${product.image||'https://via.placeholder.com/600'}" alt="${product.name}" style="width:100%;border-radius:8px">
+      </div>
+      <div style="flex:1;min-width:300px;">
+        <h1 style="font-family:Orbitron, sans-serif;">${product.name}</h1>
+        <p style="color:#00e5ff;font-weight:700;font-size:1.3rem;">$${product.price}</p>
+        <p style="margin-top:12px;line-height:1.5;color:#ddd;">${product.desc || 'No description available.'}</p>
+        <div style="margin-top:18px;display:flex;gap:12px">
+          <button class="glow-btn" id="addCartBtn">Add to Cart</button>
+          <button class="buy-btn" id="goCartBtn">Go to Cart</button>
+          <button class="buy-btn" id="msgSellerBtn">Message Seller</button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('addCartBtn').addEventListener('click', ()=> addToCartObj(product));
+    document.getElementById('goCartBtn').addEventListener('click', ()=> location.href = 'cart.html');
+    document.getElementById('msgSellerBtn').addEventListener('click', ()=>{
+      if(product.sellerEmail) window.location.href = `mailto:${product.sellerEmail}?subject=Enquiry about ${encodeURIComponent(product.name)}`;
+      else alert('Seller contact not available.');
+    });
+
+    updateCartCount();
+  </script>
+</body>
+</html>
